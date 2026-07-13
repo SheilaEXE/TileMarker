@@ -1,0 +1,14 @@
+{
+  "gmcm.option.open-editor-key.name": "Abrir editor de tiles",
+  "gmcm.option.overlay-opacity.name": "Opacidade da seleção",
+  "picker.title": "Marcar tiles para...",
+  "editor.header": "Editando: {{category}}",
+  "editor.tile": "Tile: {{x}}, {{y}}",
+  "editor.controls": "Clique esquerdo: um tile | Botão direito: pintar/apagar | Shift + botão direito: retângulo",
+  "hud.saved": "Seleção de tiles salva.",
+  "hud.no-changes": "Nenhuma seleção de tile foi alterada.",
+  "hud.cancelled-warp": "A edição foi cancelada porque você mudou de local.",
+  "hud.editor-unavailable": "O editor de tiles não pode ser aberto agora.",
+  "hud.host-only": "Somente o host pode editar seleções de tiles no multiplayer.",
+  "hud.save-failed": "Não foi possível salvar. Sua seleção ainda está aberta para tentar novamente."
+}

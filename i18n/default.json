@@ -1,0 +1,14 @@
+{
+  "gmcm.option.open-editor-key.name": "Open tile editor",
+  "gmcm.option.overlay-opacity.name": "Overlay opacity",
+  "picker.title": "Mark tiles for...",
+  "editor.header": "Editing: {{category}}",
+  "editor.tile": "Tile: {{x}}, {{y}}",
+  "editor.controls": "Left click: one tile | Right drag: paint/erase | Shift + right drag: rectangle",
+  "hud.saved": "Tile selections saved.",
+  "hud.no-changes": "No tile selections were changed.",
+  "hud.cancelled-warp": "Tile editing was cancelled because you changed location.",
+  "hud.editor-unavailable": "The tile editor can't be opened right now.",
+  "hud.host-only": "Only the host can edit tile selections in multiplayer.",
+  "hud.save-failed": "Tile selections couldn't be saved. Your unsaved selection is still open."
+}
