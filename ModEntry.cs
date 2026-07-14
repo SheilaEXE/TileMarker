@@ -17,6 +17,7 @@ namespace TileMarker
         private EditorSession editor;
         private TileMarkerApi api;
         private bool wasGameWindowActive = true;
+        private SButton? activeDragButton;
 
         public override void Entry(IModHelper helper)
         {
@@ -36,7 +37,7 @@ namespace TileMarker
 
         public override object GetApi()
         {
-            editor ??= new EditorSession(Helper, Monitor, store, () => Config.OverlayOpacityPercent);
+            editor ??= CreateEditorSession();
             api ??= new TileMarkerApi(store, OpenEditorFor, Monitor);
             return api;
         }
@@ -56,13 +57,17 @@ namespace TileMarker
         private void OnReturnedToTitle(object sender, ReturnedToTitleEventArgs e)
         {
             editor?.Abort();
+            activeDragButton = null;
             store.ClearLoadedData();
         }
 
         private void OnWarped(object sender, WarpedEventArgs e)
         {
             if (e.IsLocalPlayer)
+            {
                 editor?.OnWarped();
+                activeDragButton = null;
+            }
         }
 
         private void OpenEditorFor(string ownerModId, string category)
@@ -73,7 +78,7 @@ namespace TileMarker
                 return;
             }
 
-            editor ??= new EditorSession(Helper, Monitor, store, () => Config.OverlayOpacityPercent);
+            editor ??= CreateEditorSession();
             editor.Open(ownerModId, category);
         }
 
@@ -113,13 +118,24 @@ namespace TileMarker
             {
                 if (!editor.TryCancelDrag())
                     editor.CloseAndSave();
+                activeDragButton = null;
                 Helper.Input.Suppress(e.Button);
                 return;
             }
 
             if (e.Button == SButton.MouseLeft)
             {
-                editor.ToggleSingleTile(CurrentCursorTile());
+                if (Config.EnableLeftClickBrush)
+                {
+                    if (!editor.IsDragging)
+                    {
+                        editor.StartDrag(CurrentCursorTile(), rectangleMode: false);
+                        activeDragButton = SButton.MouseLeft;
+                    }
+                }
+                else
+                    editor.ToggleSingleTile(CurrentCursorTile());
+
                 Helper.Input.Suppress(e.Button);
             }
         }
@@ -141,7 +157,10 @@ namespace TileMarker
         private void OnMenuChanged(object sender, MenuChangedEventArgs e)
         {
             if (editor?.IsActive == true && e.NewMenu != null)
+            {
                 editor.CloseAndSave();
+                activeDragButton = null;
+            }
         }
 
         private void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
@@ -150,7 +169,10 @@ namespace TileMarker
             if (!isGameWindowActive)
             {
                 if (wasGameWindowActive)
+                {
                     editor?.TryCancelDrag();
+                    activeDragButton = null;
+                }
 
                 wasGameWindowActive = false;
                 return;
@@ -159,7 +181,10 @@ namespace TileMarker
             wasGameWindowActive = true;
 
             if (editor?.IsActive != true)
+            {
+                activeDragButton = null;
                 return;
+            }
 
             Point cursorTile = CurrentCursorTile();
             SButtonState rightButtonState = Helper.Input.GetState(SButton.MouseRight);
@@ -169,17 +194,28 @@ namespace TileMarker
                 bool rectangleMode = Helper.Input.IsDown(SButton.LeftShift)
                     || Helper.Input.IsDown(SButton.RightShift);
                 editor.StartDrag(cursorTile, rectangleMode);
+                activeDragButton = SButton.MouseRight;
             }
 
             if (editor.IsDragging)
             {
-                if (rightButtonState == SButtonState.Released)
+                SButton dragButton = activeDragButton ?? SButton.MouseRight;
+                bool dragButtonIsDown = Helper.Input.IsDown(dragButton)
+                    || Helper.Input.IsSuppressed(dragButton);
+
+                if (!dragButtonIsDown)
+                {
                     editor.EndDrag(cursorTile);
-                else if (rightButtonState == SButtonState.Pressed || rightButtonState == SButtonState.Held)
+                    activeDragButton = null;
+                }
+                else
                     editor.OnDragMoved(cursorTile);
             }
             else
+            {
+                activeDragButton = null;
                 editor.UpdatePointer(cursorTile);
+            }
 
             if (Game1.dialogueUp || Game1.eventUp)
                 editor.CloseAndSave();
@@ -231,6 +267,17 @@ namespace TileMarker
         {
             Vector2 tile = Helper.Input.GetCursorPosition().Tile;
             return new Point((int)tile.X, (int)tile.Y);
+        }
+
+        private EditorSession CreateEditorSession()
+        {
+            return new EditorSession(
+                Helper,
+                Monitor,
+                store,
+                () => Config.OverlayOpacityPercent,
+                () => Config.EnableLeftClickBrush
+            );
         }
     }
 }

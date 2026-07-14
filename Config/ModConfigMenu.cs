@@ -8,6 +8,7 @@ namespace TileMarker.Config
         void Register(IManifest mod, System.Action reset, System.Action save, bool titleScreenOnly = false);
         void AddKeybindList(IManifest mod, System.Func<StardewModdingAPI.Utilities.KeybindList> getValue, System.Action<StardewModdingAPI.Utilities.KeybindList> setValue, System.Func<string> name, System.Func<string> tooltip = null, string fieldId = null);
         void AddNumberOption(IManifest mod, System.Func<int> getValue, System.Action<int> setValue, System.Func<string> name, System.Func<string> tooltip = null, int? min = null, int? max = null, int? interval = null, System.Func<int, string> formatValue = null, string fieldId = null);
+        void AddBoolOption(IManifest mod, System.Func<bool> getValue, System.Action<bool> setValue, System.Func<string> name, System.Func<string> tooltip = null, string fieldId = null);
     }
 
     internal static class ModConfigMenu
@@ -34,6 +35,14 @@ namespace TileMarker.Config
                 name: () => mod.Helper.Translation.Get("gmcm.option.overlay-opacity.name").ToString(),
                 min: 10,
                 max: 90
+            );
+
+            gmcm.AddBoolOption(
+                mod: mod.ModManifest,
+                getValue: () => mod.Config.EnableLeftClickBrush,
+                setValue: value => mod.Config.EnableLeftClickBrush = value,
+                name: () => mod.Helper.Translation.Get("gmcm.option.left-click-brush.name").ToString(),
+                tooltip: () => mod.Helper.Translation.Get("gmcm.option.left-click-brush.tooltip").ToString()
             );
         }
     }

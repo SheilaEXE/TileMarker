@@ -1,10 +1,13 @@
 {
   "gmcm.option.open-editor-key.name": "Abrir editor de tiles",
   "gmcm.option.overlay-opacity.name": "Opacidade da seleção",
+  "gmcm.option.left-click-brush.name": "Pintar arrastando com clique esquerdo",
+  "gmcm.option.left-click-brush.tooltip": "Recomendado para telas de toque e ambientes como o Cinderbox, onde o toque funciona como o botão esquerdo do mouse.",
   "picker.title": "Marcar tiles para...",
   "editor.header": "Editando: {{category}}",
   "editor.tile": "Tile: {{x}}, {{y}}",
   "editor.controls": "Clique esquerdo: um tile | Botão direito: pintar/apagar | Shift + botão direito: retângulo",
+  "editor.controls.left-brush": "Toque: um tile | Segure e arraste: pintar/apagar | Shift + botão direito: retângulo",
   "hud.saved": "Seleção de tiles salva.",
   "hud.no-changes": "Nenhuma seleção de tile foi alterada.",
   "hud.cancelled-warp": "A edição foi cancelada porque você mudou de local.",

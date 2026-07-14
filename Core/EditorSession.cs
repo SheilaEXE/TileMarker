@@ -18,6 +18,7 @@ namespace TileMarker.Core
         private readonly IMonitor monitor;
         private readonly MarkedTileStore store;
         private readonly Func<int> getOverlayOpacityPercent;
+        private readonly Func<bool> getLeftClickBrushEnabled;
 
         private static Texture2D pixel;
 
@@ -39,12 +40,19 @@ namespace TileMarker.Core
         private DragShape dragShape = DragShape.Brush;
         private HashSet<Point> tilesBeforeDrag = new();
 
-        public EditorSession(IModHelper helper, IMonitor monitor, MarkedTileStore store, Func<int> getOverlayOpacityPercent)
+        public EditorSession(
+            IModHelper helper,
+            IMonitor monitor,
+            MarkedTileStore store,
+            Func<int> getOverlayOpacityPercent,
+            Func<bool> getLeftClickBrushEnabled
+        )
         {
             this.helper = helper;
             this.monitor = monitor;
             this.store = store;
             this.getOverlayOpacityPercent = getOverlayOpacityPercent;
+            this.getLeftClickBrushEnabled = getLeftClickBrushEnabled;
         }
 
         public void Open(string ownerModId, string category)
@@ -314,7 +322,11 @@ namespace TileMarker.Core
             {
                 helper.Translation.Get("editor.header", new { category = categoryDisplayName }).ToString(),
                 helper.Translation.Get("editor.tile", new { x = hoverTile.X, y = hoverTile.Y }).ToString(),
-                helper.Translation.Get("editor.controls").ToString()
+                helper.Translation.Get(
+                    getLeftClickBrushEnabled?.Invoke() == true
+                        ? "editor.controls.left-brush"
+                        : "editor.controls"
+                ).ToString()
             };
 
             const int padding = 12;

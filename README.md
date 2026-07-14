@@ -57,6 +57,13 @@ who *do* install it an easier way to produce the same data.
 - **Esc**: cancels the current drag preview if one is in progress; otherwise closes and saves the editor.
 - Pressing the configured key again while the editor is open also closes and saves it.
 
+### Touchscreens and Cinderbox
+
+Enable **Paint by dragging with left click** in Generic Mod Config Menu, or set
+`"EnableLeftClickBrush": true` in `config.json`. While the tile editor is open, tapping still
+marks or unmarks one tile, while holding and dragging paints or erases continuously. This option
+is disabled by default, so desktop mouse controls don't change unless the player enables it.
+
 ## Building
 
 Requirements:
