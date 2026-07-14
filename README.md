@@ -1,91 +1,233 @@
 # Tile Marker
 
-A small standalone tool: press a key, get a grid overlay over the current location, click a tile
-(or right-click-drag an area) to mark it, then repeat to unmark. Built so other mods can let
-players pick tiles visually instead of hand-editing coordinates in a config file.
+Tile Marker lets players select map tiles visually inside Stardew Valley.
 
-Tile Marker doesn't know or care what the tiles are *for* — that's entirely up to the mod that
-registers a category and reads the result back.
+Your mod decides what those tiles mean. They can be no-spawn areas, special interaction zones,
+tiles that don't block vision, or anything else your mod needs. Tile Marker only provides the
+editor and stores the selections.
 
-## Integrating your mod
+The basic integration is:
 
-1. Get the API in `GameLaunched`:
+> Register a category → open the editor → check the selected tiles.
+
+## Quick start for mod authors
+
+### 1. Copy the API contract into your project
+
+Copy [`Api/ITileMarkerApi.cs`](Api/ITileMarkerApi.cs) into your mod's source code. You may change
+its namespace to match your project.
+
+You don't need to reference `TileMarker.dll`. The copied file only tells SMAPI which methods your
+mod wants to use.
+
+### 2. Add Tile Marker to your `manifest.json`
+
+If Tile Marker is an optional convenience for your players, add this entry to your existing
+`Dependencies` list:
+
+```json
+"Dependencies": [
+  {
+    "UniqueID": "NatrollEXE.TileMarker",
+    "IsRequired": false
+  }
+]
+```
+
+Keep `IsRequired` as `false` if your mod can still work without the visual editor. Change it to
+`true` only if your mod cannot work without Tile Marker.
+
+### 3. Get the API and register a category
+
+Register your category once in `GameLaunched`. A category is one independent group of marked
+tiles owned by your mod.
 
 ```csharp
-private ITileMarkerApi tileMarkerApi;
+using StardewModdingAPI;
+using StardewModdingAPI.Events;
+using TileMarker.Api;
 
-private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
+namespace ExampleMod
 {
-    tileMarkerApi = Helper.ModRegistry.GetApi<ITileMarkerApi>("NatrollEXE.TileMarker");
-    tileMarkerApi?.RegisterCategory(ModManifest.UniqueID, "VisionIgnored", "Vision-ignored tiles");
+    public class ModEntry : Mod
+    {
+        private const string TileCategory = "NoSpawnArea";
+        private ITileMarkerApi tileMarkerApi;
+
+        public override void Entry(IModHelper helper)
+        {
+            helper.Events.GameLoop.GameLaunched += OnGameLaunched;
+        }
+
+        private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
+        {
+            tileMarkerApi = Helper.ModRegistry.GetApi<ITileMarkerApi>("NatrollEXE.TileMarker");
+
+            if (tileMarkerApi == null)
+            {
+                Monitor.Log("Tile Marker isn't installed; the visual tile editor will be unavailable.", LogLevel.Trace);
+                return;
+            }
+
+            tileMarkerApi.RegisterCategory(
+                ModManifest.UniqueID,
+                TileCategory,
+                "Areas where spawning is disabled"
+            );
+        }
+    }
 }
 ```
 
-2. (Optional) Give your own mod a keybind/GMCM button that jumps straight into the editor for your
-   category, instead of making the player go through Tile Marker's picker:
+The three registration values are:
+
+- `ModManifest.UniqueID`: identifies your mod as the owner.
+- `TileCategory`: a stable internal ID chosen by you. Don't translate or rename it after release.
+- The final text: the player-facing category name shown by Tile Marker. This can be translated.
+
+You may register more than one category if your mod needs separate tile groups.
+
+### 4. Open the editor
+
+This can be called from your own keybind, GMCM button, command, or menu:
 
 ```csharp
-tileMarkerApi?.OpenEditor(ModManifest.UniqueID, "VisionIgnored");
+tileMarkerApi?.OpenEditor(ModManifest.UniqueID, TileCategory);
 ```
 
-3. Read back what the player marked, whenever you need it (e.g. once at `SaveLoaded`, or live via
-   the `TileMarksChanged` event):
+The category must be registered before you open it. The editor always opens on the player's
+current location.
+
+Players can also use Tile Marker's own keybind and choose a registered category from its picker.
+
+### 5. Check whether a tile was marked
+
+For most mods, this is the easiest way to use the result:
 
 ```csharp
-IReadOnlyList<string> ranges = tileMarkerApi.GetMarkedTileRanges(
-    ModManifest.UniqueID, "VisionIgnored", location.NameOrUniqueName);
+bool isMarked = tileMarkerApi?.IsTileMarked(
+    ModManifest.UniqueID,
+    TileCategory,
+    location,
+    tileX,
+    tileY
+) == true;
 ```
 
-The ranges come back in the exact same `"x,y"` / `"x1-x2,y1-y2"` string format Lots of Kisses
-already uses for `VisionIgnoredTiles` — reuse the same parser, no format conversion needed. Or skip
-parsing entirely with the direct check:
+`IsTileMarked()` returns `false` when the tile isn't marked. It also returns `false` safely when
+the location is unavailable.
+
+That's the complete basic integration. The sections below are only needed for more advanced uses.
+
+## Getting all marked ranges
+
+If you need the complete selection for a location, ask for its saved ranges:
 
 ```csharp
-bool ignored = tileMarkerApi.IsTileMarked(ModManifest.UniqueID, "VisionIgnored", location, x, y);
+IReadOnlyList<string> ranges = tileMarkerApi?.GetMarkedTileRanges(
+    ModManifest.UniqueID,
+    TileCategory,
+    location.NameOrUniqueName
+) ?? Array.Empty<string>();
 ```
 
-Tile Marker is an optional soft dependency — always null-check the API, since players may not have
-it installed. Everything still works by hand-editing config.json as before; this just gives players
-who *do* install it an easier way to produce the same data.
+The result uses compact coordinate strings:
 
-## Player controls (while the editor is open)
+- `"5,8"` means one tile.
+- `"5-9,8"` means a horizontal range.
 
-- **Left-click** a tile: mark it if it was empty, unmark it if it was already marked.
-- **Right-click-drag** starting on an empty tile: paints continuously along the cursor path.
-- **Right-click-drag** starting on a marked tile: erases continuously along the cursor path.
-- **Shift + right-click-drag**: adds or removes the whole rectangle between the starting and ending tiles.
-- **Esc**: cancels the current drag preview if one is in progress; otherwise closes and saves the editor.
-- Pressing the configured key again while the editor is open also closes and saves it.
+Selections are returned row by row. For example, a rectangle covering three rows is returned as
+three horizontal ranges. This keeps the saved coordinates easy to read and process.
+
+The list is empty when that location has no marked tiles. If you only need to test individual
+tiles, prefer `IsTileMarked()` so you don't need to parse these strings yourself.
+
+## Reacting immediately when selections change
+
+Subscribe to `TileMarksChanged` if your mod caches the selected tiles or needs to refresh something
+as soon as the player closes the editor:
+
+```csharp
+// Add this immediately after RegisterCategory() in the GameLaunched example above:
+tileMarkerApi.TileMarksChanged += OnTileMarksChanged;
+
+private void OnTileMarksChanged(object sender, TileMarksChangedEventArgs e)
+{
+    if (e.OwnerModId != ModManifest.UniqueID || e.Category != TileCategory)
+        return;
+
+    Monitor.Log($"Tile selection changed in {e.LocationName}.", LogLevel.Trace);
+    // Refresh your cached data here, if your mod uses a cache.
+}
+```
+
+Always filter the event by owner and category, since other mods may also use Tile Marker.
+
+## API reference
+
+| Member | What it does |
+| --- | --- |
+| `RegisterCategory(ownerModId, category, displayName)` | Registers one tile group and makes it available in the category picker. |
+| `OpenEditor(ownerModId, category)` | Opens a registered category on the player's current location. |
+| `IsTileMarked(ownerModId, category, location, x, y)` | Checks one tile without requiring any range parsing. |
+| `GetMarkedTileRanges(ownerModId, category, locationName)` | Returns every marked coordinate range for one location. |
+| `TileMarksChanged` | Raised after a changed selection is saved. |
+
+## Optional integration and fallback behavior
+
+If Tile Marker is optional, always null-check `tileMarkerApi`. Your mod should keep its normal
+behavior when the API isn't available.
+
+For example, a mod may continue accepting manually written coordinates in its own `config.json`,
+while Tile Marker gives players an easier visual way to create or update the same data.
+
+## Player controls
+
+These controls apply only while the tile editor is open:
+
+- **Left-click**: mark or unmark one tile.
+- **Right-click and drag from an empty tile**: paint continuously.
+- **Right-click and drag from a marked tile**: erase continuously.
+- **Shift + right-click and drag**: mark or unmark a rectangle.
+- **Esc during a drag**: cancel that drag.
+- **Esc while not dragging**: close and save.
+- Pressing the configured editor key again also closes and saves.
 
 ### Touchscreens and Cinderbox
 
-Enable **Paint by dragging with left click** in Generic Mod Config Menu, or set
-`"EnableLeftClickBrush": true` in `config.json`. While the tile editor is open, tapping still
-marks or unmarks one tile, while holding and dragging paints or erases continuously. This option
-is disabled by default, so desktop mouse controls don't change unless the player enables it.
+Enable **Paint by dragging with left click** in Generic Mod Config Menu, or set this in
+`config.json`:
 
-## Building
+```json
+"EnableLeftClickBrush": true
+```
+
+While this option is enabled, tapping still changes one tile. Holding and dragging with a finger
+paints or erases continuously. The option is disabled by default, so desktop mouse controls don't
+change unless the player enables it.
+
+## How selections are saved
+
+- Selections are stored separately for each save file, location, mod, and category.
+- Closing the editor saves changes immediately, so they survive quitting before the next in-game day.
+- Stardew's save data also receives a backup copy during a normal game save.
+- Only the host can edit selections in multiplayer.
+- Reopening the editor shows the selections already stored for the current map.
+
+## Building Tile Marker
 
 Requirements:
 
-- [.NET SDK](https://dotnet.microsoft.com/download) (targets `net6.0`)
-- Stardew Valley installed locally
+- [.NET SDK](https://dotnet.microsoft.com/download), targeting `net6.0`.
+- Stardew Valley installed locally.
 
-The project uses [Pathoschild.Stardew.ModBuildConfig](https://www.nuget.org/packages/Pathoschild.Stardew.ModBuildConfig), which auto-detects your Stardew Valley install path on Windows, Linux, and macOS. If it can't find it automatically, set `<GamePath>` in `TileMarker.csproj`.
+The project uses
+[`Pathoschild.Stardew.ModBuildConfig`](https://www.nuget.org/packages/Pathoschild.Stardew.ModBuildConfig)
+to detect the game path and package the mod automatically.
 
 ```sh
 dotnet build
 ```
 
-On a successful build, the mod is automatically copied into your `Mods` folder (via the build config package) as well as into `bin/Debug/net6.0/`.
-
-## Notes
-
-- Marked tiles are saved per save file (they depend on that save's installed map mods), not globally.
-- Closing the editor writes an immediate per-save copy, so selections survive exiting the game before
-  the next overnight save. An embedded save-data copy is also updated as a transferable backup when
-  Stardew saves the day.
-- In multiplayer, tile editing and saving are currently host-only. Farmhands can keep playing normally,
-  but the host must create or change the shared selections.
-- Re-opening the editor on a location shows whatever was already marked there, so a map-changing
-  mod update doesn't leave stale marks invisible — you can see and adjust them against the new layout.
+After a successful build, the mod is copied to the game's `Mods` folder and packaged under
+`bin/Debug/net6.0/`. If the game path can't be detected, set `<GamePath>` in `TileMarker.csproj`.
