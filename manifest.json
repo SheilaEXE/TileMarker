@@ -1,0 +1,10 @@
+{
+  "Name": "Tile Marker",
+  "Author": "NatrollEXE",
+  "Version": "1.0.0",
+  "Description": "In-game tool to mark map tiles for other mods to consume (e.g. vision-blocking overrides). Click or drag over the grid overlay instead of hand-editing config.json coordinates.",
+  "UniqueID": "NatrollEXE.TileMarker",
+  "EntryDll": "TileMarker.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": []
+}
