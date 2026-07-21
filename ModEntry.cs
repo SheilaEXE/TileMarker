@@ -38,7 +38,7 @@ namespace TileMarker
         public override object GetApi()
         {
             editor ??= CreateEditorSession();
-            api ??= new TileMarkerApi(store, OpenEditorFor, Monitor);
+            api ??= new TileMarkerApi(store, OpenEditorFor, Monitor, () => Config?.MergeCompatibleCategories == true);
             return api;
         }
 

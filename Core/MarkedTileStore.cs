@@ -26,6 +26,7 @@ namespace TileMarker.Core
         // Registered categories, so the picker menu has something to show. Not persisted —
         // consuming mods re-register every GameLaunched.
         public List<(string OwnerModId, string Category, string DisplayName)> RegisteredCategories { get; } = new();
+        private readonly Dictionary<(string OwnerModId, string Category), string> sharedGroups = new();
 
         public event EventHandler<TileMarksChangedEventArgs> TileMarksChanged;
 
@@ -35,14 +36,44 @@ namespace TileMarker.Core
             this.monitor = monitor;
         }
 
-        public bool Register(string ownerModId, string category, string displayName)
+        public bool Register(string ownerModId, string category, string displayName, string sharedGroup = null)
         {
             if (string.IsNullOrWhiteSpace(ownerModId) || string.IsNullOrWhiteSpace(category))
                 return false;
 
             RegisteredCategories.RemoveAll(r => r.OwnerModId == ownerModId && r.Category == category);
             RegisteredCategories.Add((ownerModId, category, string.IsNullOrWhiteSpace(displayName) ? category : displayName));
+
+            var key = (ownerModId, category);
+            if (string.IsNullOrWhiteSpace(sharedGroup))
+                sharedGroups.Remove(key);
+            else
+                sharedGroups[key] = sharedGroup.Trim();
+
             return true;
+        }
+
+        public IReadOnlyList<(string OwnerModId, string Category)> GetCompatibleCategories(string ownerModId, string category)
+        {
+            var ownKey = (ownerModId, category);
+            if (!sharedGroups.TryGetValue(ownKey, out string sharedGroup) || string.IsNullOrWhiteSpace(sharedGroup))
+                return new[] { ownKey };
+
+            var compatible = new List<(string OwnerModId, string Category)>();
+            foreach (var registration in RegisteredCategories)
+            {
+                var candidate = (registration.OwnerModId, registration.Category);
+                if (sharedGroups.TryGetValue(candidate, out string candidateGroup)
+                    && string.Equals(sharedGroup, candidateGroup, StringComparison.OrdinalIgnoreCase))
+                {
+                    compatible.Add(candidate);
+                }
+            }
+
+            if (compatible.Count == 0)
+                compatible.Add(ownKey);
+
+            return compatible;
         }
 
         public bool IsRegistered(string ownerModId, string category)
