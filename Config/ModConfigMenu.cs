@@ -44,6 +44,14 @@ namespace TileMarker.Config
                 name: () => mod.Helper.Translation.Get("gmcm.option.left-click-brush.name").ToString(),
                 tooltip: () => mod.Helper.Translation.Get("gmcm.option.left-click-brush.tooltip").ToString()
             );
+
+            gmcm.AddBoolOption(
+                mod: mod.ModManifest,
+                getValue: () => mod.Config.MergeCompatibleCategories,
+                setValue: value => mod.Config.MergeCompatibleCategories = value,
+                name: () => mod.Helper.Translation.Get("gmcm.option.merge-compatible-categories.name").ToString(),
+                tooltip: () => mod.Helper.Translation.Get("gmcm.option.merge-compatible-categories.tooltip").ToString()
+            );
         }
     }
 }

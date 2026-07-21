@@ -23,6 +23,12 @@ namespace TileMarker.Api
         void RegisterCategory(string ownerModId, string category, string displayName);
 
         /// <summary>
+        /// Registers a category that can share its effective marked tiles with other categories
+        /// using the same group ID when the player enables merging. Saved selections remain separate.
+        /// </summary>
+        void RegisterCategoryWithSharedGroup(string ownerModId, string category, string displayName, string sharedGroup);
+
+        /// <summary>
         /// Opens the tile editor directly for this owner/category on the player's current location,
         /// skipping the picker. Useful if your own mod wants its own keybind/GMCM button as a
         /// shortcut into Tile Marker instead of making the player use Tile Marker's picker.

@@ -87,6 +87,25 @@ The three registration values are:
 
 You may register more than one category if your mod needs separate tile groups.
 
+### Optional: let compatible categories merge
+
+Two mods can keep independent selections while allowing players to use their combined tiles.
+Register both categories with the same stable shared-group ID:
+
+```csharp
+tileMarkerApi.RegisterCategoryWithSharedGroup(
+    ModManifest.UniqueID,
+    TileCategory,
+    "Transparent vision obstacles",
+    "ExampleAuthor.SharedVisionIgnored"
+);
+```
+
+When **Merge compatible categories** is enabled in Tile Marker's GMCM, API lookups for one
+category include every registered category in the same shared group. The saved selections are
+never copied or overwritten. Disabling the option immediately restores each category's individual
+results. Categories registered normally with `RegisterCategory` are never merged.
+
 ### 4. Open the editor
 
 This can be called from your own keybind, GMCM button, command, or menu:
@@ -168,6 +187,7 @@ Always filter the event by owner and category, since other mods may also use Til
 | Member | What it does |
 | --- | --- |
 | `RegisterCategory(ownerModId, category, displayName)` | Registers one tile group and makes it available in the category picker. |
+| `RegisterCategoryWithSharedGroup(ownerModId, category, displayName, sharedGroup)` | Registers an independent category that can be read together with compatible categories when merging is enabled. |
 | `OpenEditor(ownerModId, category)` | Opens a registered category on the player's current location. |
 | `IsTileMarked(ownerModId, category, location, x, y)` | Checks one tile without requiring any range parsing. |
 | `GetMarkedTileRanges(ownerModId, category, locationName)` | Returns every marked coordinate range for one location. |
